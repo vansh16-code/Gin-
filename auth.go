@@ -10,55 +10,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var users = map[string]string{}
+var users = map[string]struct {
+	Password string
+	Role     string
+}{}
+
 var jwtSecret = []byte("supersecretkey")
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-
-		authHeader := ctx.GetHeader("Authorization")
-
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			ctx.JSON(401, gin.H{"error": "missing or invalid token"})
-			ctx.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
-			}
-			return jwtSecret, nil
-		})
-
-		if err != nil || !token.Valid {
-			ctx.JSON(401, gin.H{"error": "invalid token"})
-			ctx.Abort()
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			ctx.JSON(401, gin.H{
-				"error": "Could not read claims",
-			})
-			ctx.Abort()
-			return 
-		}
-
-		email, ok := claims["email"].(string)
-	if !ok {
-		ctx.JSON(401, gin.H{"error": "invalid token payload"})
-		ctx.Abort()
-		return
-	}
-
-		ctx.Set("email",email)
-		ctx.Next()
-	}
-}
 
 
 
@@ -68,13 +26,19 @@ func LoginHandler(ctx *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 
-	storedPassword, exists := users[body.Email]
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+	ctx.JSON(400, gin.H{"error": "email and password are required"})
+	return
+}
+
+
+	user, exists := users[body.Email]
 	if !exists {
 		ctx.JSON(401, gin.H{"error": "invalid email or password"})
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(body.Password)); err != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
 		ctx.JSON(401, gin.H{"error": "invalid email or password"})
 		return
 	}
@@ -82,6 +46,7 @@ func LoginHandler(ctx *gin.Context) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": body.Email,
+		"role" : user.Role,
 		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	})
 
@@ -127,8 +92,13 @@ func SignupHandler(ctx *gin.Context) {
 		return
 	}
 
-	users[body.Email] = string(hashed)
-
+	users[body.Email] = struct {
+		Password string
+		Role     string
+	}{
+		Password: string(hashed),
+		Role:     "user",   // default role
+	}
 
 
 	ctx.JSON(200, gin.H{
@@ -145,4 +115,11 @@ func protectedRoute(ctx *gin.Context){
 	ctx.JSON(200,gin.H{
 		"user" : email,
 	})
+}
+
+func AdminHandler(ctx *gin.Context){
+	ctx.JSON(200,gin.H{
+		"msg": "Welcome to Admin",
+	})
+
 }
