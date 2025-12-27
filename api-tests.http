@@ -1,0 +1,57 @@
+### API Testing Guide
+### Base URL: http://localhost:8080
+
+### ============================================
+### 1. PUBLIC ENDPOINTS (No Auth Required)
+### ============================================
+
+### GET /welcome
+GET http://localhost:8080/welcome
+
+### GET /send-email
+GET http://localhost:8080/send-email
+
+### ============================================
+### 2. AUTHENTICATION ENDPOINTS
+### ============================================
+
+### POST /signup - Create new user
+POST http://localhost:8080/signup
+Content-Type: application/json
+
+{
+  "email": "user@test.com",
+  "password": "password123"
+}
+
+### POST /login - Get JWT token
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "email": "user@test.com",
+  "password": "password123"
+}
+
+### ============================================
+### 3. JWT-PROTECTED ENDPOINTS (Bearer token)
+### ============================================
+
+### GET /me - Protected route
+### Replace YOUR_TOKEN_HERE with token from /login
+GET http://localhost:8080/me
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### GET /admin - Admin only route
+### Replace YOUR_TOKEN_HERE with admin token
+GET http://localhost:8080/admin
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### ============================================
+### TESTING WORKFLOW
+### ============================================
+### 1. Run: POST /signup (create user)
+### 2. Run: POST /login (get token)
+### 3. Copy token from response
+### 4. Replace YOUR_TOKEN_HERE in protected routes
+### 5. Test protected endpoints
