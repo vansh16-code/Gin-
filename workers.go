@@ -10,7 +10,7 @@ type EmailJob struct {
 	Body    string
 }
 
-var emailJobs = make(chan EmailJob, 20) //creates a channel queue with a buffer size of 20
+var emailJobs = make(chan EmailJob, 20) 
 
 func StartEmailWorker() {
 	go func() {
