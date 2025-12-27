@@ -10,11 +10,11 @@ import (
 
 func main() {
 
-	
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found (using system env)")
 	}
 
+	ConnectDatabase()
 
 	r := gin.Default()
 	r.Use(Logger())

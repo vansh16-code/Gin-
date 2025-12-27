@@ -8,11 +8,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var users = map[string]struct {
-	Password string
-	Role     string
-}{}
-
 var jwtSecret = []byte("supersecretkey")
 
 
@@ -25,26 +20,24 @@ func LoginHandler(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-	ctx.JSON(400, gin.H{"error": "email and password are required"})
-	return
-}
+		ctx.JSON(400, gin.H{"error": "email and password are required"})
+		return
+	}
 
-
-	user, exists := users[body.Email]
-	if !exists {
+	var user User
+	if err := DB.Where("email = ?", body.Email).First(&user).Error; err != nil {
 		ctx.JSON(401, gin.H{"error": "invalid email or password"})
 		return
 	}
 
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
 		ctx.JSON(401, gin.H{"error": "invalid email or password"})
 		return
 	}
-
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": body.Email,
-		"role" : user.Role,
+		"role":  user.Role,
 		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	})
 
@@ -57,8 +50,7 @@ func LoginHandler(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{
 		"message": "login successful",
 		"token":   tokenString,
-})
-
+	})
 }
 
 func SignupHandler(ctx *gin.Context) {
@@ -69,40 +61,43 @@ func SignupHandler(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Email and pasword are required",
+			"error": "Email and password are required",
 		})
 		return
 	}
 
-	if _, exists := users[body.Email]; exists {
+	var existingUser User
+	if err := DB.Where("email = ?", body.Email).First(&existingUser).Error; err == nil {
 		ctx.JSON(400, gin.H{
 			"error": "user already exists",
 		})
 		return
 	}
 
-
-	hashed , err := bcrypt.GenerateFromPassword([]byte(body.Password),10)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(body.Password), 10)
 	if err != nil {
-		ctx.JSON(500,gin.H{
+		ctx.JSON(500, gin.H{
 			"error": "Could not create User",
 		})
 		return
 	}
 
-	users[body.Email] = struct {
-		Password string
-		Role     string
-	}{
+	user := User{
+		Email:    body.Email,
 		Password: string(hashed),
-		Role:     "user",   // default role
+		Role:     "user",
 	}
 
+	if err := DB.Create(&user).Error; err != nil {
+		ctx.JSON(500, gin.H{
+			"error": "Could not create User",
+		})
+		return
+	}
 
 	ctx.JSON(200, gin.H{
 		"message": "user created successfully",
 	})
-
 }
 
 

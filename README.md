@@ -54,8 +54,27 @@ SMTP_PASS=your-app-password
 
 ## Running the Server
 
+### Option 1: Local Development (without Docker)
+
 ```bash
+# Start PostgreSQL locally or use Docker for DB only
+docker-compose up db -d
+
+# Run the app
 go run .
+```
+
+### Option 2: Docker Compose (Recommended)
+
+```bash
+# Start both database and app
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
 Server will start on `http://localhost:8080`
@@ -130,9 +149,12 @@ Use the provided `api-tests.http` file with VS Code REST Client extension:
 back/
 ├── main.go           # Entry point, route definitions
 ├── auth.go           # Authentication handlers (login, signup)
+├── database.go       # Database connection and models
 ├── middleware.go     # Custom middleware (Logger, Auth, AdminOnly)
 ├── handlers.go       # Request handlers
 ├── email.go          # Email functionality
+├── docker-compose.yml # Docker services configuration
+├── Dockerfile        # App container configuration
 ├── api-tests.http    # API testing file
 ├── .env              # Environment variables (not tracked)
 ├── .env.example      # Environment template
@@ -156,6 +178,11 @@ back/
 | SMTP_PORT | SMTP server port | 587 |
 | SMTP_USER | Email address | your-email@gmail.com |
 | SMTP_PASS | Email app password | xxxx xxxx xxxx xxxx |
+| POSTGRES_USER | Database user | postgres |
+| POSTGRES_PASSWORD | Database password | postgres |
+| POSTGRES_DB | Database name | gindb |
+| DB_HOST | Database host | localhost (or db in Docker) |
+| DB_PORT | Database port | 5432 |
 
 ## Troubleshooting
 
